@@ -206,30 +206,36 @@ contract InversePerpetualVault is Ownable {
 
         // 3. Health Factor (HF) Calculation: HF = ((Collateral + UPNL) * Price) / (Size * MMR)
         int256 netMarginInt = int256(pos.collateral) + uPnL;
-        require(netMarginInt > 0, "Margin fully depleted, bankrupt");
-        uint256 netMargin = uint256(netMarginInt);
+        uint256 netMargin = netMarginInt > 0 ? uint256(netMarginInt) : 0;
 
-        uint256 hfNumerator = netMargin * currentPrice; 
-        uint256 hfDenominator = (pos.sizeUsd * maintenanceMarginBps) / 10000;
-        uint256 healthFactor = (hfNumerator * WAD) / hfDenominator;
+        uint256 healthFactor;
+        if (netMargin == 0) {
+            healthFactor = 0; // If fully bankrupt, HF instantly collapses
+        } else {
+            uint256 hfNumerator = netMargin * currentPrice; 
+            uint256 hfDenominator = (pos.sizeUsd * maintenanceMarginBps) / 10000;
+            // Since hfNumerator (WAD * WAD) and hfDenominator is Size (WAD), 
+            // the division naturally yields exactly 1 WAD precision.
+            healthFactor = hfNumerator / hfDenominator;
+        }
 
         // Liquidation constraint: HF < 1 (in WAD scale)
         require(healthFactor < WAD, "Position is healthy (HF >= 1)");
 
         // 4. Calculate Liquidation Reward
         // Reward = (PositionSize_USD / Price) * LiquidationRewardBps
+        // Even if the user is completely bankrupt (netMargin = 0), the Vault (acting as the Insurance Fund)
+        // guarantees this payout from its own reserves to ensure the Keeper Bot has the gas incentive to clear toxic debt!
         uint256 positionInBtc = (pos.sizeUsd * WAD) / currentPrice;
         uint256 reward = (positionInBtc * liquidationRewardBps) / 10000;
 
-        // Cap reward to the remaining margin so we don't mint unbacked tokens
-        if (reward > netMargin) {
-            reward = netMargin;
-        }
-
         // 5. State updates & Reward Transfer
-        // TODO: Transfer `reward` hBTC to msg.sender (liquidator)
-        // TODO: Handle the remaining collateral (e.g. sent to Insurance Fund)
         delete positions[targetUser]; 
+        
+        // Final execute of physical hBTC to reward the bot directly from Vault's pool
+        if (reward > 0) {
+            require(hBTC_Token.transfer(msg.sender, reward), "Reward transfer failed");
+        }
 
         emit PositionLiquidated(targetUser, msg.sender, reward);
     }
