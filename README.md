@@ -16,8 +16,8 @@ To compile and run this project, you need the **Foundry** smart contract develop
 Once `forge` is installed, dive into this directory and pull the standard testing/security libraries:
 ```bash
 # Pull standard libraries (without committing git submodules)
-forge install foundry-rs/forge-std --no-commit
-forge install openzeppelin/openzeppelin-contracts --no-commit
+forge install foundry-rs/forge-std
+forge install openzeppelin/openzeppelin-contracts
 ```
 
 ## 🧪 3. Reproduce the Quant Model (Local Testing)
