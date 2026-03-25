@@ -90,4 +90,71 @@ contract InversePerpetualVaultTest is Test {
         (uint256 sizeUsd, , , ) = vault.positions(user);
         assertEq(sizeUsd, 0);
     }
+
+    // --- EDGE CASES & FUZZ TESTING --- //
+
+    function test_RevertIf_InsufficientMargin() public {
+        vm.startPrank(user);
+        // Deposit only 0.1 WAD (We need 0.2 WAD for the following position)
+        token.approve(address(vault), 0.1 * 10**18);
+        vault.depositCollateral(0.1 * 10**18);
+
+        // Try to open $120,000 position at $60,000 (Requires 0.2 WAD margin)
+        vm.expectRevert("Insufficient margin to open");
+        vault.openPosition(120_000 * WAD, true);
+        vm.stopPrank();
+    }
+
+    function test_liquidate_short_pump() public {
+        vm.startPrank(user);
+        // Deposit exactly 0.2 WAD (10x Max Leverage limit for $120k size at $60k entry)
+        token.approve(address(vault), (2 * WAD) / 10);
+        vault.depositCollateral((2 * WAD) / 10);
+
+        // Open Short Position (isLong = false)
+        vault.openPosition(120_000 * WAD, false);
+        vm.stopPrank();
+
+        // Simulate Bull Market Pump: $60k -> $90k
+        // The user was highly leveraged. Their 0.2 native BTC margin is instantly wiped out by the negative PnL.
+        oracle.setAnswer(90000 * 10**8);
+
+        // Keeper Bot Liquidates Squeezed Short Seller
+        vm.startPrank(liquidator);
+        vault.liquidate(user);
+        vm.stopPrank();
+
+        // System confirms raw Token balances were correctly pushed to the bot from Vault Insurance reserves
+        assertGt(token.balanceOf(liquidator), 0);
+        
+        (uint256 sizeUsd, , , ) = vault.positions(user);
+        assertEq(sizeUsd, 0);
+    }
+
+    function testFuzz_openPosition_mathTrunation(uint256 randomSizeUsd) public {
+        // Bound random size between $100 and $1,000,000 to simulate realistic bounds
+        randomSizeUsd = bound(randomSizeUsd, 100 * WAD, 1000000 * WAD);
+
+        // Give user massive liquidity to prevent margin reverts during Fuzzing
+        token.mint(user, 100000 * WAD);
+        vm.startPrank(user);
+        token.approve(address(vault), 100000 * WAD);
+        vault.depositCollateral(100000 * WAD);
+
+        vault.openPosition(randomSizeUsd, true);
+        vm.stopPrank();
+
+        (uint256 registeredSizeUsd, , uint256 entryPrice, ) = vault.positions(user);
+        assertEq(registeredSizeUsd, randomSizeUsd);
+        assertEq(entryPrice, 60000 * WAD);
+    }
+
+    function test_RevertIf_UnauthorizedRiskParameterUpdate() public {
+        vm.startPrank(user); // Standard user, not the Owner!
+        
+        vm.expectRevert(); // Should revert with Ownable Unauthorized wrapper
+        vault.setRiskParameters(1000, 1000);
+        
+        vm.stopPrank();
+    }
 }
