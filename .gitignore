@@ -20,3 +20,8 @@ venv/
 .env
 .env.*
 !.env.example
+anvil.log
+boot_frontend.sh
+start_vite.sh
+inverse-perp-ui/frontend.log
+inverse-perp-ui/frontend.pid
