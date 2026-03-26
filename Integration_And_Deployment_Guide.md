@@ -208,15 +208,15 @@ The script auto-uses the real **Sepolia Chainlink BTC/USD feed** (`0x1b44F351481
 **`inverse-perp-ui/.env`**
 ```
 VITE_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-VITE_VAULT_ADDRESS=0x<sepolia vault>
-VITE_HBTC_ADDRESS=0x<sepolia hbtc>
+VITE_VAULT_ADDRESS=0xBA20E2aB0451a7df61eA7186Ff101Dcb4996153a
+VITE_HBTC_ADDRESS=0xecCb412d994EBD7F2619d0c36CB2eb37d8557d1d
 ```
 
 **`keeper-bot/.env`**
 ```
 MOCK_MODE=false
 RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-VAULT_ADDRESS=0x<sepolia vault>
+VAULT_ADDRESS=0xBA20E2aB0451a7df61eA7186Ff101Dcb4996153a
 PRIVATE_KEY=0xYOUR_PRIVATE_KEY
 POLL_INTERVAL=30
 ```
@@ -226,6 +226,30 @@ POLL_INTERVAL=30
 cast send $VAULT_ADDRESS "setCollateralToken(address)" $HBTC_ADDRESS \
   --private-key $PRIVATE_KEY --rpc-url $RPC_URL
 ```
+
+### Post-deploy: Grant MINTER_ROLE to teammates
+
+`hBTC` uses **OpenZeppelin AccessControl**. Only the deployer has `MINTER_ROLE` by default. Teammates need the role to mint their own test tokens.
+
+**Admin grants role to a teammate:**
+```bash
+cast send $HBTC_ADDRESS \
+  "grantRole(bytes32,address)" \
+  $(cast keccak "MINTER_ROLE") \
+  <TEAMMATE_ADDRESS> \
+  --private-key $PRIVATE_KEY --rpc-url $RPC_URL
+```
+
+**Teammate mints to themselves (after receiving MINTER_ROLE):**
+```bash
+# 5 hBTC = 5000000000000000000 (18 decimals)
+cast send $HBTC_ADDRESS \
+  "mint(address,uint256)" \
+  <THEIR_ADDRESS> 5000000000000000000 \
+  --private-key <THEIR_PRIVATE_KEY> --rpc-url $RPC_URL
+```
+
+> ℹ️ Only `DEFAULT_ADMIN_ROLE` holders can call `grantRole()`. Teammates with only `MINTER_ROLE` can mint but cannot grant the role to others.
 
 ---
 
