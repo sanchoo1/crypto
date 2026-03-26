@@ -1,2 +1,22 @@
 *.xlsx
 ~$*
+
+# Foundry
+cache/
+out/
+broadcast/
+.forgebuild/
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+venv/
+.venv/
+
+# Environment Variables (CRITICAL)
+.env
+.env.*
+!.env.example
