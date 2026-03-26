@@ -131,7 +131,7 @@ class KeeperBot:
         try:
             # Get users from PositionOpened events
             position_filter = self.vault.events.PositionOpened.create_filter(
-                fromBlock='earliest'
+                from_block='earliest'
             )
             events = position_filter.get_all_entries()
 
@@ -149,8 +149,8 @@ class KeeperBot:
                         "id": user,
                         "owner": user,
                         "size_usd": pos[0] / 1e18,  # Convert from wei
-                        "entry_price": pos[2] / 1e8,  # 8 decimals for price
-                        "collateral_hbtc": pos[1] / 1e8  # 8 decimals for hBTC
+                        "entry_price": pos[2] / 1e18,  # 18 decimals for price (WAD inside Vault)
+                        "collateral_hbtc": pos[1] / 1e18  # 18 decimals for hBTC
                     })
 
             log.info(f"✓ Found {len(positions)} active positions from {len(self.tracked_users)} tracked users")
@@ -252,7 +252,7 @@ class KeeperBot:
 
             # Sign and send transaction
             signed = self.account.sign_transaction(tx)
-            tx_hash = self.w3.eth.send_raw_transaction(signed.rawTransaction)
+            tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
 
             # Wait for confirmation
             receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)

@@ -16,7 +16,8 @@ export default function PositionCard({ position, onClose, loading }) {
     healthFactor,
     liquidationPrice,
     currentPrice,
-    openedAt
+    openedAt,
+    isLiquidated  // ghost flag: true for 30s after liquidation
   } = position
 
   const isProfitable = unrealizedPnL > 0
@@ -36,7 +37,9 @@ export default function PositionCard({ position, onClose, loading }) {
   return (
     <div className={`
       relative p-6 rounded-2xl border transition-smooth card-hover animate-slide-up shadow-soft
-      ${isAtRisk
+      ${isLiquidated
+        ? 'border-status-danger-light dark:border-status-danger-dark bg-red-950/30 shadow-glow-red opacity-80'
+        : isAtRisk
         ? 'border-status-danger-light dark:border-status-danger-dark bg-red-50 dark:bg-red-950/20 shadow-glow-red'
         : (isWarning && !isProfitable)
         ? 'border-status-warning-light dark:border-status-warning-dark'
@@ -70,8 +73,20 @@ export default function PositionCard({ position, onClose, loading }) {
         </button>
       </div>
 
+      {/* LIQUIDATED ghost banner */}
+      {isLiquidated && (
+        <div className="mb-4 p-3 rounded bg-red-900/40 border border-red-500 animate-pulse">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">💀</span>
+            <span className="text-sm font-bold text-red-400 uppercase tracking-widest">
+              LIQUIDATED — Keeper Bot Executed
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Critical warning banner */}
-      {isAtRisk && (
+      {isAtRisk && !isLiquidated && (
         <div className="mb-4 p-3 rounded bg-status-danger-light/10 dark:bg-status-danger-dark/10 border border-status-danger-light dark:border-status-danger-dark">
           <div className="flex items-center gap-2">
             <span className="text-lg">⚠️</span>

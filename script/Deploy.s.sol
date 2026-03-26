@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Script, console} from "forge-std/Script.sol";
 import {hBTC} from "../src/hBTC.sol";
 import {InversePerpetualVault} from "../src/InversePerpetualVault.sol";
+import {MockAggregator} from "../test/mocks/MockAggregator.sol";
 
 contract DeployVault is Script {
     function run() external {
@@ -16,6 +17,14 @@ contract DeployVault is Script {
 
         // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
+
+        // Local Anvil Deployment Network checks
+        if (block.chainid == 31337) {
+            MockAggregator mockFeed = new MockAggregator(); 
+            mockFeed.setAnswer(67500 * 1e8);
+            btcUsdPriceFeed = address(mockFeed);
+            console.log("Mock Aggregator (Local) deployed at:", btcUsdPriceFeed);
+        }
 
         // 1. Deploy the ERC20 Collateral Token (hBTC)
         hBTC token = new hBTC();

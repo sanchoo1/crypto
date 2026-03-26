@@ -20,6 +20,8 @@ export function useContract(signer, account) {
   const [wallet, setWallet] = useState(MOCK_WALLET)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  // Ghost position: keeps liquidated positions visible for 30s before clearing
+  const [ghostPosition, setGhostPosition] = useState(null)
 
   /**
    * Toggle between mock and live mode
@@ -98,7 +100,19 @@ export function useContract(signer, account) {
       const result = vault.interface.decodeFunctionResult('positions', raw)
 
       if (!result || result.sizeUsd.toString() === '0') {
-        setPositions([])
+        // Position gone — was it just liquidated? Show ghost for 30s
+        setPositions(prev => {
+          if (prev.length > 0 && !prev[0].isLiquidated) {
+            const ghost = { ...prev[0], isLiquidated: true, healthFactor: 0 }
+            setGhostPosition(ghost)
+            setTimeout(() => {
+              setGhostPosition(null)
+              setPositions([])
+            }, 30000) // 30 second display window
+            return [ghost] // Immediately show as red
+          }
+          return []
+        })
         return
       }
 
@@ -107,8 +121,8 @@ export function useContract(signer, account) {
         id: account,
         type: result.isLong ? 'LONG' : 'SHORT',
         sizeUSD: parseFloat(ethers.formatUnits(result.sizeUsd, 18)),
-        entryPrice: parseFloat(ethers.formatUnits(result.entryPrice, 8)),
-        collateralHBTC: parseFloat(ethers.formatUnits(result.collateral, 8)),
+        entryPrice: parseFloat(ethers.formatUnits(result.entryPrice, 18)), // WAD-scaled inside Vault
+        collateralHBTC: parseFloat(ethers.formatUnits(result.collateral, 18)), // 18 decimals hBTC
         openedAt: new Date().toISOString()
       }
       setPositions(enrichPositions([pos], btcPriceValue))
@@ -137,7 +151,7 @@ export function useContract(signer, account) {
 
       setWallet({
         address: account,
-        hBTCBalance: parseFloat(ethers.formatUnits(hbtcBalance, 8))
+        hBTCBalance: parseFloat(ethers.formatUnits(hbtcBalance, 18)) // hBTC uses 18 decimals
       })
 
     } catch (err) {
@@ -295,21 +309,23 @@ export function useContract(signer, account) {
     }
 
     try {
-      const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer)
+      // Force use of reliable Localhost RPC instead of potentially misconfigured MetaMask Signer
+      const reliableProvider = new ethers.JsonRpcProvider(RPC_URL)
+      const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, reliableProvider)
 
       // Get price feed address from vault
       const priceFeedAddress = await contract.btcUsdPriceFeed()
       const priceFeedAbi = [
         'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)'
       ]
-      const priceFeed = new ethers.Contract(priceFeedAddress, priceFeedAbi, signer)
+      const priceFeed = new ethers.Contract(priceFeedAddress, priceFeedAbi, reliableProvider)
       const [, price] = await priceFeed.latestRoundData()
       const priceValue = parseFloat(ethers.formatUnits(price, 8))
       setBtcPrice(priceValue)
       return priceValue
 
     } catch (err) {
-      console.error("Failed to fetch price:", err)
+      console.error("Failed to fetch price from Anvil:", err)
       return btcPrice // Return current price on error
     }
   }
@@ -345,17 +361,25 @@ export function useContract(signer, account) {
   }, [isMockMode])
 
   /**
-   * Simulate BTC price movement in mock mode only
+   * Continuous Polling: Simulate in Mock Mode, or Fetch from Blockchain in Live Mode
    */
   useEffect(() => {
-    if (!isMockMode) return
-
-    const interval = setInterval(() => {
-      setBtcPrice(prev => parseFloat((prev + (Math.random() - 0.5) * 200).toFixed(2)))
-    }, 3000) // Update every 3 seconds
-
+    let interval;
+    if (isMockMode) {
+      interval = setInterval(() => {
+        setBtcPrice(prev => parseFloat((prev + (Math.random() - 0.5) * 200).toFixed(2)))
+      }, 3000) // Update every 3 seconds
+    } else {
+      // Live Mode: Poll blockchain for true price and position states
+      interval = setInterval(async () => {
+        if (signer && account) {
+          const freshPrice = await fetchPrice();
+          await fetchPositions();
+        }
+      }, 5000); // Polling every 5 seconds to reduce RPC load
+    }
     return () => clearInterval(interval)
-  }, [isMockMode])
+  }, [isMockMode, signer, account])
 
   /**
    * Re-enrich positions when price changes (mock mode only)
