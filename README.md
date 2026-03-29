@@ -314,6 +314,12 @@ base/
 
 NYU Tandon — Selected Topics in Financial Engineering, Spring 2026
 
+| Name | Role |
+|---|---|
+| **Rutuja Ingol** | Frontend (React Dashboard) & Keeper Bot |
+| **Sancho Wong** | Smart Contracts |
+| **Yoga Sathyanarayanan** | Quantitative Model |
+
 ---
 
 *Deployed on Ethereum Sepolia Testnet. Not for production use.*
