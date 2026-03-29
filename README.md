@@ -317,7 +317,6 @@ To try the protocol hands-on without any setup, import this dedicated test walle
 | | |
 |---|---|
 | **Network** | Sepolia Testnet (Chain ID: 11155111) |
-| **RPC URL** | `https://eth-sepolia.g.alchemy.com/v2/Yi0qaYX-ch_kyg7SphaEJ` |
 | **Address** | `0x941C3b259e58c03c9335f6723e81865A74FE2eb3` |
 | **Private Key** | `0xa0c4fedfaed372046ce0c3da71db3a069d824a15aa1e60a4d857e72f21d3c69f` |
 | **Pre-loaded** | 10 hBTC + 0.05 Sepolia ETH (gas fees) |
