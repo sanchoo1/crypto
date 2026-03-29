@@ -310,13 +310,36 @@ base/
 
 ---
 
+## 🧪 Demo / Grader Wallet (Pre-funded)
+
+To try the protocol hands-on without any setup, import this dedicated test wallet into MetaMask:
+
+| | |
+|---|---|
+| **Network** | Sepolia Testnet (Chain ID: 11155111) |
+| **RPC URL** | `https://eth-sepolia.g.alchemy.com/v2/Yi0qaYX-ch_kyg7SphaEJ` |
+| **Address** | `0x941C3b259e58c03c9335f6723e81865A74FE2eb3` |
+| **Private Key** | `0xa0c4fedfaed372046ce0c3da71db3a069d824a15aa1e60a4d857e72f21d3c69f` |
+| **Pre-loaded** | 10 hBTC + 0.05 Sepolia ETH (gas fees) |
+
+**Steps to test:**
+1. Install [MetaMask](https://metamask.io) and add Sepolia network (Chain ID: `11155111`)
+2. Import the private key above into MetaMask
+3. Visit the frontend and click **Connect Wallet**
+4. Toggle to **LIVE** mode
+5. Click **Approve** → **Open New Position** to open a leveraged short
+
+> ⚠️ This is a testnet-only wallet with no real funds. Safe to use for grading purposes.
+
+---
+
 ## 👥 Team
 
 NYU Tandon — Selected Topics in Financial Engineering, Spring 2026
 
 | Name | Role |
 |---|---|
-| **Rutuja Ingol** | Frontend (React Dashboard) & Keeper Bot |
+| **Rutuja Ingole** | Frontend (React Dashboard) & Keeper Bot |
 | **Sancho Wong** | Smart Contracts |
 | **Yoga Sathyanarayanan** | Quantitative Model |
 
